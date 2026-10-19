@@ -1,0 +1,25 @@
+{
+  "name": "campuslands-express-ratelimit-interactivo",
+  "version": "1.0.0",
+  "description": "Interfaz de interaccion integrado con ratelimits",
+  "keywords": [
+    "NodeJS",
+    "expressJS",
+    "RateLimit"
+  ],
+  "homepage": "https://github.com/lucaspajarito01/campuslands-express-ratelimit-interactivo#readme",
+  "bugs": {
+    "url": "https://github.com/lucaspajarito01/campuslands-express-ratelimit-interactivo/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lucaspajarito01/campuslands-express-ratelimit-interactivo.git"
+  },
+  "license": "ISC",
+  "author": "lucaspajarito01",
+  "type": "module",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  }
+}

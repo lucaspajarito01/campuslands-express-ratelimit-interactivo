@@ -1,146 +1,132 @@
 import { Router } from "express";
-import {canciones} from '../data/canciones.db.js'
+import { canciones } from "../data/canciones.db.js";
 import { agregarCanciones } from "../middlewares/rateLimiter.js";
 import { validarCanciones } from "../middlewares/validator.js";
-import rateLimit from "express-rate-limit";
 
-const cancion = Router();
+const cancionesRouter = Router();
 
-cancion.get('/', (req, res, next)=>{
-    res.send.json({
-        exito: true,
-        total: canciones.length,
-        rateLimitInfo: req.rateLimit
-            ?{
-                limiteventana: req.rateLimit.limit,
-                usados: req.rateLimit.current,
-                tokensRestantes: req.rateLimit.remainig
-            }        
-            :undefined,
-            datos: canciones
-    })
-})
-
-// Buscar cancion por id
-
-cancion.get("/:id", (req, res) => {
-  const idBuscado = parseInt(req.params.id, 10);
- 
-  if (isNaN(idBuscado)) {
-    return res.status(400).json({
+function obtenerId(req, res) {
+  if (!/^\d+$/.test(req.params.id)) {
+    res.status(400).json({
       exito: false,
-      error: "El parámetro ID debe ser un número entero válido."
+      error: "El parámetro ID debe ser un número entero válido.",
     });
+    return null;
   }
- 
-  const cancionEncontrada = canciones.find((c) => c.id === idBuscado);
- 
-  if (!cancionEncontrada) {
-    return res.status(404).json({
+
+  const id = Number(req.params.id);
+  if (!Number.isSafeInteger(id)) {
+    res.status(400).json({
       exito: false,
-      error: `No se encontró ningúna cancion con el ID ${idBuscado}.`
+      error: "El parámetro ID debe ser un número entero válido.",
     });
+    return null;
   }
- 
+
+  return id;
+}
+
+cancionesRouter.get("/", (req, res) => {
   res.status(200).json({
     exito: true,
-    mensaje: "cancion encontrada exitosamente.",
-    cancion: cancionEncontrada
+    total: canciones.length,
+    rateLimitInfo: req.rateLimit
+      ? {
+          limiteVentana: req.rateLimit.limit,
+          usados: req.rateLimit.used,
+          tokensRestantes: req.rateLimit.remaining,
+        }
+      : undefined,
+    datos: canciones,
   });
 });
 
+cancionesRouter.get("/:id", (req, res) => {
+  const id = obtenerId(req, res);
+  if (id === null) return;
 
-// Insertar canciones
+  const cancion = canciones.find((item) => item.id === id);
+  if (!cancion) {
+    return res.status(404).json({
+      exito: false,
+      error: `No se encontró una canción con el ID ${id}.`,
+    });
+  }
 
-cancion.post("/", agregarCanciones, validarCanciones, (req, res) => {
+  return res.status(200).json({
+    exito: true,
+    mensaje: "Canción encontrada exitosamente.",
+    cancion,
+  });
+});
+
+cancionesRouter.post("/", agregarCanciones, validarCanciones, (req, res) => {
   const { titulo, autor, duracion } = req.body;
- 
-  const nuevoId =
-    videojuegos.length > 0
-      ? Math.max(...canciones.map((c) => c.id)) + 1
-      : 1;
- 
+  const nuevoId = canciones.reduce(
+    (maxId, cancion) => Math.max(maxId, cancion.id),
+    0,
+  ) + 1;
   const nuevaCancion = {
     id: nuevoId,
     titulo: titulo.trim(),
     autor: autor.trim(),
     duracion: duracion.trim(),
   };
- 
+
   canciones.push(nuevaCancion);
- 
-  res.status(201).json({
+
+  return res.status(201).json({
     exito: true,
-    mensaje:"Cancion agregada exitosamente al catálogo en memoria.",
-    videojuego: nuevaCancion
+    mensaje: "Canción agregada exitosamente al catálogo.",
+    cancion: nuevaCancion,
   });
 });
 
+cancionesRouter.put("/:id", validarCanciones, (req, res) => {
+  const id = obtenerId(req, res);
+  if (id === null) return;
 
-// Actulizar canciones.
-
-cancion.put("/:id", validarCanciones, (req, res) => {
-  const idBuscado = parseInt(req.params.id, 10);
- 
-  if (isNaN(idBuscado)) {
-    return res.status(400).json({
-      exito: false,
-      error: "El parámetro ID debe ser un número entero válido."
-    });
-  }
- 
-  const indice = canciones.findIndex((c) => c.id === idBuscado);
- 
+  const indice = canciones.findIndex((cancion) => cancion.id === id);
   if (indice === -1) {
     return res.status(404).json({
       exito: false,
-      error: `No se puede actualizar: No existe una cancion con ID ${idBuscado}.`
+      error: `No se puede actualizar: no existe una canción con ID ${id}.`,
     });
   }
- 
+
   const { titulo, autor, duracion } = req.body;
- 
-  const nuevaCancion = {
-    id: nuevoId,
+  canciones[indice] = {
+    id,
     titulo: titulo.trim(),
     autor: autor.trim(),
     duracion: duracion.trim(),
-  };;
- 
-  res.status(200).json({
+  };
+
+  return res.status(200).json({
     exito: true,
-    mensaje: `Cancion con ID ${idBuscado} actualizado correctamente.`,
-    cancion: canciones[indice]
+    mensaje: `Canción con ID ${id} actualizada correctamente.`,
+    cancion: canciones[indice],
   });
 });
 
-// Eliminar cancion
-cancion.delete("/:id", (req, res) => {
-  const idBuscado = parseInt(req.params.id, 10);
- 
-  if (isNaN(idBuscado)) {
-    return res.status(400).json({
-      exito: false,
-      error: "El parámetro ID debe ser un número entero válido."
-    });
-  }
- 
-  const indice = canciones.findIndex((j) => j.id === idBuscado);
- 
+cancionesRouter.delete("/:id", (req, res) => {
+  const id = obtenerId(req, res);
+  if (id === null) return;
+
+  const indice = canciones.findIndex((cancion) => cancion.id === id);
   if (indice === -1) {
     return res.status(404).json({
       exito: false,
-      error: `No se puede eliminar: No existe la cancion con ID ${idBuscado}.`
+      error: `No se puede eliminar: no existe la canción con ID ${id}.`,
     });
   }
- 
+
   const [cancionEliminada] = canciones.splice(indice, 1);
- 
-  res.status(200).json({
+  return res.status(200).json({
     exito: true,
-    mensaje: `Cancion con ID ${idBuscado} eliminado del catálogo.`,
-    cancion:cancionEliminada
+    mensaje: `Canción con ID ${id} eliminada del catálogo.`,
+    cancion: cancionEliminada,
   });
 });
- 
-export default cancion;
+
+export default cancionesRouter;
